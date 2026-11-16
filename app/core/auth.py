@@ -9,9 +9,9 @@ providers only touches this file.
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 
-import httpx
+import httpx2
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -76,7 +76,7 @@ class JWKSCache:
         async with self._lock:
             if self._keys and time.monotonic() - self._fetched_at < min_age:
                 return  # refreshed by a concurrent request, or rotation rate-limited
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx2.AsyncClient(timeout=10) as client:
                 if self._jwks_url is None:
                     discovery = settings.OIDC_ISSUER.rstrip("/") + (
                         "/.well-known/openid-configuration"
@@ -113,7 +113,7 @@ def _extract_roles(claims: dict[str, Any]) -> frozenset[str]:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
 ) -> AuthenticatedUser:
     """FastAPI dependency guarding protected routes."""
     if credentials is None:
@@ -133,7 +133,7 @@ async def get_current_user(
     except jwt.InvalidTokenError as exc:
         # Never log or echo the token itself.
         raise _unauthorized("Invalid token") from exc
-    except (httpx.HTTPError, KeyError, ValueError, jwt.exceptions.PyJWTError) as exc:
+    except (httpx2.HTTPError, KeyError, ValueError, jwt.exceptions.PyJWTError) as exc:
         # Network failure, or a malformed discovery/JWKS document (non-JSON
         # body, missing jwks_uri, unparsable keys): the IdP is unusable.
         raise HTTPException(
@@ -147,3 +147,7 @@ async def get_current_user(
         roles=_extract_roles(claims),
         claims=claims,
     )
+
+
+# Alias to declare a protected route: `async def route(user: CurrentUser): ...`
+CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]

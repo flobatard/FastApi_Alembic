@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.auth.schemas import MeRead
-from app.core.auth import AuthenticatedUser, get_current_user
+from app.core.auth import CurrentUser
 
 router = APIRouter(tags=["auth"])
 
 
-@router.get("/me", response_model=MeRead)
-async def read_me(user: AuthenticatedUser = Depends(get_current_user)) -> MeRead:
+@router.get("/me")
+async def read_me(user: CurrentUser) -> MeRead:
     """Demo protected route: returns the authenticated user's identity."""
     return MeRead(
         sub=user.sub,

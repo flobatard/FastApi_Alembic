@@ -1,10 +1,8 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
+from typing import Annotated
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
@@ -22,13 +20,16 @@ engine = create_async_engine(
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
-    class_=AsyncSession,
     expire_on_commit=False,
     autoflush=False,
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncIterator[AsyncSession]:
     """FastAPI dependency yielding an async DB session."""
     async with AsyncSessionLocal() as session:
         yield session
+
+
+# Alias to inject a session in a route: `async def route(db: SessionDep): ...`
+SessionDep = Annotated[AsyncSession, Depends(get_db)]

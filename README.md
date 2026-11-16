@@ -5,8 +5,10 @@ prêt à l'emploi : app factory, configuration multi-environnements, base de
 données async et validation de tokens OIDC — sans aucune logique métier. À
 cloner puis à adapter (renommer `PROJECT_NAME`, ajouter vos domaines).
 
-Stack : **FastAPI** + **SQLAlchemy 2.0 (async)** + **Alembic** + **PostgreSQL
-(asyncpg)** + **OIDC** (validation JWT côté resource-server).
+Stack : **Python 3.14** + **FastAPI** + **SQLAlchemy 2.1 (async)** + **Alembic** +
+**PostgreSQL 18 (asyncpg)** + **OIDC** (validation JWT côté resource-server).
+Dépendances et environnement gérés par **[uv](https://docs.astral.sh/uv/)**,
+lint/format par **Ruff**, tests par **pytest**.
 
 ## Architecture
 
@@ -15,20 +17,25 @@ app/
 ├── main.py            # FastAPI app factory + lifespan + CORS
 ├── core/              # cross-cutting concerns
 │   ├── config.py      # settings (env > .env > config/<APP_ENV>.yaml)
-│   ├── database.py    # async engine, session, declarative Base
-│   └── auth.py        # validation JWT OIDC (JWKS) + get_current_user
+│   ├── database.py    # async engine, session (SessionDep), declarative Base
+│   └── auth.py        # validation JWT OIDC (JWKS) + CurrentUser
 ├── models/            # un module par modèle, tous ré-exportés dans __init__.py
 ├── health/            # healthcheck (public)
 └── auth/              # route de démo protégée GET /me
 config/                # config publique par environnement (development.yaml, production.yaml)
 alembic/               # migrations (env.py async)
+scripts/               # création / suppression de la base, raccourcis Alembic
 tests/                 # pytest (sans réseau ni fournisseur OIDC réel)
+pyproject.toml         # dépendances, entrypoint FastAPI, config Ruff et pytest
+uv.lock                # versions exactes résolues (à committer)
 ```
 
 Chaque nouveau domaine est un nouveau package sous `app/` avec ses `schemas.py`,
 `service.py` et `router.py` ; ses modèles vont dans `app/models/<name>.py` et
 sont importés (et listés dans `__all__`) dans `app/models/__init__.py` pour que
-l'autogenerate d'Alembic les voie.
+l'autogenerate d'Alembic les voie. Les dépendances s'injectent via des alias
+`Annotated` : `db: SessionDep` pour une session, `user: CurrentUser` pour une
+route protégée.
 
 ## Configuration
 
@@ -56,16 +63,22 @@ touche que ce fichier. Le claim portant les rôles applicatifs dépend du
 fournisseur : il se configure via `OIDC_ROLES_CLAIM` (ex. `roles`, ou
 `urn:zitadel:iam:org:project:roles` pour Zitadel).
 
-Les routes protégées utilisent la dépendance `get_current_user` ;
-`GET /api/v1/me` sert d'exemple de référence. `/api/v1/health` reste publique.
+Les routes protégées déclarent un paramètre `user: CurrentUser` (alias de
+`Depends(get_current_user)`) ; `GET /api/v1/me` sert d'exemple de référence.
+`/api/v1/health` reste publique.
 
 ## Setup (dev local)
 
+Prérequis : [uv](https://docs.astral.sh/uv/getting-started/installation/) (il
+installe lui-même Python 3.14 si besoin, cf. `.python-version`).
+
 ```bash
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+uv sync                       # crée .venv et installe les dépendances (dev incluses)
 cp .env.example .env          # secrets ; mettez vos URLs OIDC dans config/development.yaml
 ```
+
+Ajouter une dépendance : `uv add <paquet>` (ou `uv add --dev <paquet>`) ; mettre
+à jour le lockfile : `uv lock --upgrade`.
 
 ## Run
 
@@ -77,13 +90,14 @@ docker compose up --build
 ```
 
 Les migrations s'appliquent automatiquement au démarrage (`alembic upgrade
-head`), puis l'API écoute sur le port 8000. Un éventuel reverse proxy devant
+head`), puis l'API est servie par `fastapi run` sur le port 8000. L'image est
+construite avec uv à partir de `uv.lock` (sans les dépendances de dev). Un éventuel reverse proxy devant
 l'API est hors périmètre de ce repo.
 
 ### Bare (dev)
 
 ```bash
-uvicorn app.main:app --reload
+uv run fastapi dev            # entrypoint lu dans [tool.fastapi] (pyproject.toml)
 ```
 
 Docs sur http://localhost:8000/docs · health sur http://localhost:8000/api/v1/health
@@ -91,18 +105,31 @@ Docs sur http://localhost:8000/docs · health sur http://localhost:8000/api/v1/h
 ## Migrations de base de données
 
 ```bash
-alembic revision --autogenerate -m "..."   # créer une migration depuis les modèles
-alembic upgrade head                        # appliquer les migrations
-alembic downgrade -1                        # revenir une révision en arrière
+uv run alembic revision --autogenerate -m "..."   # créer une migration depuis les modèles
+uv run alembic upgrade head                        # appliquer les migrations
+uv run alembic downgrade -1                        # revenir une révision en arrière
 ```
+
+Les migrations générées sont automatiquement passées à `ruff check --fix` puis
+`ruff format` (hooks `post_write_hooks` dans `alembic.ini`). Raccourcis
+équivalents : `scripts/new_migration.sh "..."`, `scripts/migrate.sh`, et
+`scripts/init.sh` / `scripts/drop.sh` pour créer / supprimer la base.
 
 Exécution manuelle dans Docker : `docker compose run --rm api alembic upgrade head`.
 
 ## Tests
 
 ```bash
-pytest
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
 ```
 
 Les tests d'auth signent des tokens avec une clé RSA générée et stubbent le
 cache JWKS — aucun réseau ni fournisseur OIDC réel requis.
+
+## Skills pour agents IA
+
+`.agents/skills/` et `.claude/skills/` contiennent des liens vers les skills
+fournies par les dépendances installées (ex. la skill officielle FastAPI) ; ils
+se résolvent après `uv sync`. Pour les rafraîchir après une mise à jour :
+`uvx library-skills --claude`.

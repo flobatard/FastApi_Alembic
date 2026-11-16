@@ -1,13 +1,48 @@
+[project]
+name = "fastapi-alembic-template"
+version = "0.1.0"
+description = "Template de backend API REST : FastAPI, SQLAlchemy async, Alembic, PostgreSQL et OIDC"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    # API (fastapi-cli fournit `fastapi dev` / `fastapi run` et uvicorn[standard])
+    "fastapi>=0.163.1",
+    "fastapi-cli>=0.0.34",
+    "pydantic-settings[yaml]>=2.16.3",
+    # Base de données SQL
+    "sqlalchemy[asyncio]>=2.1.9",
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    # JWT (validation des tokens OIDC via JWKS)
+    "pyjwt[crypto]>=2.15.1",
+    # HTTP (découverte OIDC + JWKS)
+    "httpx2>=2.16.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
 [tool.ruff]
 line-length = 100
-target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
-[tool.ruff.lint.flake8-bugbear]
-# Depends(...) as a default is the standard FastAPI dependency-injection idiom
-extend-immutable-calls = ["fastapi.Depends", "fastapi.security.HTTPBearer"]
+[tool.ruff.lint.isort]
+# Le dossier local alembic/ (migrations) ne doit pas faire passer le paquet
+# alembic pour un module first-party.
+known-third-party = ["alembic"]
 
-[tool.pytest.ini_options]
+[tool.ruff.lint.per-file-ignores]
+# Garder `op` / `sa` importés dans les migrations écrites à la main.
+"alembic/versions/*.py" = ["F401"]
+
+[tool.pytest]
 testpaths = ["tests"]
+strict = true

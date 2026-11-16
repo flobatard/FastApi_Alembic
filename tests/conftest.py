@@ -68,8 +68,6 @@ def make_token(rsa_private_key: rsa.RSAPrivateKey):
             "exp": now + exp_delta,
             **extra,
         }
-        return jwt.encode(
-            claims, rsa_private_key, algorithm="RS256", headers={"kid": TEST_KID}
-        )
+        return jwt.encode(claims, rsa_private_key, algorithm="RS256", headers={"kid": TEST_KID})
 
     return _make

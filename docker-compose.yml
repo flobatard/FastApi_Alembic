@@ -1,12 +1,14 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:18
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
       POSTGRES_DB: ${POSTGRES_DB:-app}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18+ : monter /var/lib/postgresql (les données vivent dans
+      # un sous-dossier versionné, ce qui facilite pg_upgrade)
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
       interval: 5s
@@ -16,7 +18,7 @@ services:
   api:
     build: .
     # Les migrations s'appliquent au démarrage (no-op tant que versions/ est vide)
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "alembic upgrade head && fastapi run"
     # .env est requis : cp .env.example .env (OIDC_* et POSTGRES_* obligatoires)
     env_file: .env
     environment:

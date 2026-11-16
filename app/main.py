@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,7 +11,7 @@ from app.health.router import router as health_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup logic goes here (warm caches, check connections, ...)
     yield
     # Shutdown: release the DB connection pool cleanly

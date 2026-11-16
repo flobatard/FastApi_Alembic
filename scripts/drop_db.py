@@ -5,38 +5,30 @@ Reads connection info from app.core.config (DATABASE_URL).
 
 import asyncio
 import sys
-from urllib.parse import urlparse
 
 import asyncpg
+from sqlalchemy.engine import make_url
 
 sys.path.insert(0, ".")
 from app.core.config import get_settings
 
 
 async def drop_database_if_exists() -> None:
-    settings = get_settings()
+    # make_url decodes the URL-encoded credentials (urlparse would not)
+    url = make_url(get_settings().DATABASE_URL)
+    db_name = url.database
 
-    url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
-    parsed = urlparse(url)
-
-    db_name = parsed.path.lstrip("/")
-    user = parsed.username
-    password = parsed.password
-    host = parsed.hostname
-    port = parsed.port or 5432
-
+    # Connect to the default 'postgres' maintenance database
     conn = await asyncpg.connect(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
+        host=url.host,
+        port=url.port or 5432,
+        user=url.username,
+        password=url.password,
         database="postgres",
     )
 
     try:
-        exists = await conn.fetchval(
-            "SELECT 1 FROM pg_database WHERE datname = $1", db_name
-        )
+        exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", db_name)
         if not exists:
             print(f"Database '{db_name}' does not exist — nothing to do.")
             return

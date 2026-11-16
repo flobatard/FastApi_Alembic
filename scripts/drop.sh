@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
 read -r -p "Are you sure you want to drop the database? [y/N] " confirm
 if [[ "${confirm,,}" != "y" ]]; then
@@ -8,6 +9,6 @@ if [[ "${confirm,,}" != "y" ]]; then
 fi
 
 echo "==> Dropping database..."
-python scripts/drop_db.py
+uv run python scripts/drop_db.py
 
 echo "==> Done."

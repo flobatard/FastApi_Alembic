@@ -1,11 +1,10 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
 
 # Import the model registry so every table is registered on Base.metadata.
 from app import models  # noqa: F401
@@ -13,7 +12,8 @@ from app.core.config import settings
 from app.core.database import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Escape "%" for configparser: the URL-encoded password may contain %XX sequences.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

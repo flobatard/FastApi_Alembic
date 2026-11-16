@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Self
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from pydantic import model_validator
@@ -114,7 +115,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
 
     @model_validator(mode="after")
-    def _assemble_database_url(self) -> "Settings":
+    def _assemble_database_url(self) -> Self:
         if self.DATABASE_URL:
             self.DATABASE_URL = _normalize_async_url(self.DATABASE_URL)
         else:

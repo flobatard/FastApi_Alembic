@@ -60,9 +60,7 @@ def test_me_returns_503_when_jwks_unavailable(client, monkeypatch, make_token, e
         raise error
 
     monkeypatch.setattr(auth_module.jwks_cache, "get_signing_key", broken_jwks)
-    response = client.get(
-        "/api/v1/me", headers={"Authorization": f"Bearer {make_token()}"}
-    )
+    response = client.get("/api/v1/me", headers={"Authorization": f"Bearer {make_token()}"})
     assert response.status_code == 503
 
 
