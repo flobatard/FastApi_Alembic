@@ -97,8 +97,10 @@ l'API est hors périmètre de ce repo.
 ### Bare (dev)
 
 ```bash
-uv run fastapi dev            # entrypoint lu dans [tool.fastapi] (pyproject.toml)
+./launch.sh                    # = uv run fastapi dev (args transmis, ex. ./launch.sh --port 8001)
 ```
+
+L'entrypoint (`app.main:app`) est lu dans `[tool.fastapi]` de `pyproject.toml`.
 
 Docs sur http://localhost:8000/docs · health sur http://localhost:8000/api/v1/health
 
