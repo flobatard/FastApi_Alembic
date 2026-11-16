@@ -19,6 +19,7 @@ uv run ruff check . && uv run ruff format --check .          # lint + format che
 uv run alembic revision --autogenerate -m "..."              # new migration (or scripts/new_migration.sh "...")
 uv run alembic upgrade head                                  # apply migrations (or scripts/migrate.sh)
 scripts/init.sh                           # create the DB if missing, then migrate
+scripts/rename.sh "My Project" --dry-run  # rename package, API title, README title, DB name
 docker compose up --build                 # full stack; runs `alembic upgrade head && fastapi run`
 ```
 

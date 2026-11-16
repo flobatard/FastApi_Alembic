@@ -3,7 +3,8 @@
 Template de backend pour démarrer un projet **API REST**. Il fournit un socle
 prêt à l'emploi : app factory, configuration multi-environnements, base de
 données async et validation de tokens OIDC — sans aucune logique métier. À
-cloner puis à adapter (renommer `PROJECT_NAME`, ajouter vos domaines).
+cloner puis à adapter : renommer le projet (`scripts/rename.sh`, cf.
+[Renommer le projet](#renommer-le-projet)), puis ajouter vos domaines.
 
 Stack : **Python 3.14** + **FastAPI** + **SQLAlchemy 2.1 (async)** + **Alembic** +
 **PostgreSQL 18 (asyncpg)** + **OIDC** (validation JWT côté resource-server).
@@ -24,7 +25,7 @@ app/
 └── auth/              # route de démo protégée GET /me
 config/                # config publique par environnement (development.yaml, production.yaml)
 alembic/               # migrations (env.py async)
-scripts/               # création / suppression de la base, raccourcis Alembic
+scripts/               # renommage du projet, création / suppression de la base, raccourcis Alembic
 tests/                 # pytest (sans réseau ni fournisseur OIDC réel)
 pyproject.toml         # dépendances, entrypoint FastAPI, config Ruff et pytest
 uv.lock                # versions exactes résolues (à committer)
@@ -79,6 +80,23 @@ cp .env.example .env          # secrets ; mettez vos URLs OIDC dans config/devel
 
 Ajouter une dépendance : `uv add <paquet>` (ou `uv add --dev <paquet>`) ; mettre
 à jour le lockfile : `uv lock --upgrade`.
+
+### Renommer le projet
+
+À faire une fois, juste après avoir cloné le template :
+
+```bash
+scripts/rename.sh "Mon Projet" --dry-run   # aperçu des modifications, rien n'est écrit
+scripts/rename.sh "Mon Projet"             # applique, puis met à jour uv.lock
+```
+
+Le script met à jour le nom du paquet (`pyproject.toml`, `uv.lock`), le titre de
+l'API (`PROJECT_NAME`), le titre de ce README et le nom de la base PostgreSQL
+(`app/core/config.py`, `config/*.yaml`, `docker-compose.yml`). Le nom de paquet
+(`mon-projet`) et le nom de base (`mon_projet`) sont dérivés du nom affiché ;
+`--slug`, `--db` et `--description` permettent de les forcer. Le paquet Python
+`app/` garde son nom : c'est un simple dossier d'import, le renommer ne changerait
+que les imports.
 
 ## Run
 
